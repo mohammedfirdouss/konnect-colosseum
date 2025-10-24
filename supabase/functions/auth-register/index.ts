@@ -1,8 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { corsHeaders } from '../_shared/cors.ts';
-
 import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
+import { handleCors, createServiceRoleSupabaseClient, errorResponse } from '../_shared/utils.ts';
 
 const registerSchema = z.object({
   email: z.string().email(),
@@ -13,43 +11,28 @@ const registerSchema = z.object({
 });
 
 serve(async (req) => {
-  // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
-  }
+  const corsResponse = handleCors(req);
+  if (corsResponse) return corsResponse;
 
   try {
     const body = await req.json();
     const { email, password, username, role = 'buyer', solana_wallet_address } = registerSchema.parse(body);
 
+    const supabaseClient = createServiceRoleSupabaseClient();
 
-    // Create Supabase client with service role for bypassing RLS
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
-
-    // Create auth user
     const { data: authData, error: authError } = await supabaseClient.auth.signUp({
       email,
       password,
     });
 
     if (authError) {
-      return new Response(
-        JSON.stringify({ error: authError.message }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return errorResponse(authError.message, 400);
     }
 
     if (!authData.user) {
-      return new Response(
-        JSON.stringify({ error: 'Failed to create user' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return errorResponse('Failed to create user', 500);
     }
 
-    // Create user profile in public.users table
     const { data: profileData, error: profileError } = await supabaseClient
       .from('users')
       .insert({
@@ -63,12 +46,8 @@ serve(async (req) => {
       .single();
 
     if (profileError) {
-      // If profile creation fails, delete the auth user
       await supabaseClient.auth.admin.deleteUser(authData.user.id);
-      return new Response(
-        JSON.stringify({ error: profileError.message }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return errorResponse(profileError.message, 400);
     }
 
     return new Response(
@@ -77,19 +56,12 @@ serve(async (req) => {
         profile: profileData,
         message: 'User registered successfully',
       }),
-      { status: 201, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 201, headers: { 'Content-Type': 'application/json' } }
     );
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return new Response(
-        JSON.stringify({ error: error.issues }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return errorResponse(JSON.stringify(error.issues), 400);
     }
-
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return errorResponse(error.message, 500);
   }
 });
