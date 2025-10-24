@@ -1,32 +1,19 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { corsHeaders } from '../_shared/cors.ts';
+import { handleCors, createSupabaseClient, errorResponse } from '../_shared/utils.ts';
 
 serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
-  }
+  const corsResponse = handleCors(req);
+  if (corsResponse) return corsResponse;
 
   try {
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
-        global: {
-          headers: { Authorization: req.headers.get('Authorization')! },
-        },
-      }
-    );
+    const supabaseClient = createSupabaseClient(req);
 
     // PUT /orders/deliver - Seller confirms delivery with code
     if (req.method === 'PUT') {
       const { order_id, delivery_code, transaction_signature } = await req.json();
 
       if (!order_id || !delivery_code) {
-        return new Response(
-          JSON.stringify({ error: 'order_id and delivery_code are required' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return errorResponse('order_id and delivery_code are required', 400);
       }
 
       const {
@@ -35,10 +22,7 @@ serve(async (req) => {
       } = await supabaseClient.auth.getUser();
 
       if (userError || !user) {
-        return new Response(
-          JSON.stringify({ error: 'Unauthorized' }),
-          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return errorResponse('Unauthorized', 401);
       }
 
       // Fetch the order
@@ -49,25 +33,16 @@ serve(async (req) => {
         .single();
 
       if (orderError || !order) {
-        return new Response(
-          JSON.stringify({ error: 'Order not found' }),
-          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return errorResponse('Order not found', 404);
       }
 
       if (order.seller_id !== user.id) {
-        return new Response(
-          JSON.stringify({ error: 'Unauthorized to deliver this order' }),
-          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return errorResponse('Unauthorized to deliver this order', 403);
       }
 
       // Validate delivery code (in production, this would be more secure)
       if (order.delivery_code && order.delivery_code !== delivery_code) {
-        return new Response(
-          JSON.stringify({ error: 'Invalid delivery code' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return errorResponse('Invalid delivery code', 400);
       }
 
       // Update order status to completed
@@ -82,10 +57,7 @@ serve(async (req) => {
         .single();
 
       if (updateError) {
-        return new Response(
-          JSON.stringify({ error: updateError.message }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return errorResponse(updateError.message, 500);
       }
 
       // Create escrow release transaction record
@@ -114,18 +86,12 @@ serve(async (req) => {
 
       return new Response(
         JSON.stringify({ order: updatedOrder }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
-    return new Response(
-      JSON.stringify({ error: 'Method not allowed' }),
-      { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return errorResponse('Method not allowed', 405);
   } catch (error) {
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return errorResponse(error.message, 500);
   }
 });
