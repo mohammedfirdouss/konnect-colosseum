@@ -1,0 +1,26 @@
+{
+  "name": "konnect",
+  "version": "0.1.0",
+  "description": "Created with Anchor",
+  "main": "lib/index.js",
+  "scripts": {
+    "lint": "eslint . --ext .ts,.js",
+    "lint:fix": "eslint . --ext .ts,.js --fix"
+  },
+  "dependencies": {
+    "@coral-xyz/anchor": "^0.29.0"
+  },
+  "devDependencies": {
+    "@types/bn.js": "^5.1.0",
+    "@types/chai": "^4.1.0",
+    "@types/mocha": "^5.2.0",
+    "chai": "^4.1.0",
+    "eslint": "^8.0.0",
+    "eslint-config-prettier": "^8.0.0",
+    "eslint-plugin-prettier": "^4.0.0",
+    "mocha": "^9.0.0",
+    "prettier": "^2.0.0",
+    "ts-mocha": "^8.0.0",
+    "typescript": "^4.0.0"
+  }
+}
