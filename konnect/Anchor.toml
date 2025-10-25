@@ -12,7 +12,7 @@ konnect = "mbLjS3jLDX74Ptza9EiiG4qcPPE9aPS7EzifCLZc5hJ"
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "localnet"
+cluster = "devnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]
