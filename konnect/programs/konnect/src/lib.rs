@@ -38,6 +38,7 @@ pub mod konnect {
         m.owner = ctx.accounts.owner.key();
         m.verified = false;
         m.bump = ctx.bumps.merchant;
+        m.next_nonce = 0;
         Ok(())
     }
 
@@ -56,19 +57,32 @@ pub mod konnect {
         image_url: String,
     ) -> Result<()> {
         require!(price > 0, MarketplaceError::InvalidAmount);
-        let l = &mut ctx.accounts.listing;
-        l.marketplace = ctx.accounts.marketplace.key();
-        l.seller = ctx.accounts.merchant.owner;
-        l.mint = ctx.accounts.mint.key();
-        l.price = price;
-        l.quantity = quantity;
-        l.is_service = is_service;
-        l.active = true;
-        l.bump = ctx.bumps.listing;
-        l.name = name;
-        l.image_url = image_url;
+
+        let merchant = &mut ctx.accounts.merchant;
+        let listing = &mut ctx.accounts.listing;
+
+        let nonce = merchant.next_nonce;
+        merchant.next_nonce = merchant
+            .next_nonce
+            .checked_add(1)
+            .ok_or(MarketplaceError::MathOverflow)?;
+
+        // Initialize listing data
+        listing.marketplace = ctx.accounts.marketplace.key();
+        listing.seller = merchant.owner;
+        listing.mint = ctx.accounts.mint.key();
+        listing.price = price;
+        listing.quantity = quantity;
+        listing.is_service = is_service;
+        listing.active = true;
+        listing.bump = ctx.bumps.listing;
+        listing.name = name;
+        listing.image_url = image_url;
+        listing.nonce = nonce;
+
         Ok(())
     }
+    
 
     pub fn update_listing(
         ctx: Context<UpdateListing>,
@@ -383,9 +397,10 @@ pub struct Merchant {
     pub owner: Pubkey,
     pub verified: bool,
     pub bump: u8,
+    pub next_nonce: u64,
 }
 impl Merchant {
-    pub const SIZE: usize = 32 + 32 + 1 + 1;
+    pub const SIZE: usize = 32 + 32 + 1 + 1 + 8;
 }
 
 #[account]
@@ -400,9 +415,10 @@ pub struct Listing {
     pub bump: u8,
     pub name: String,
     pub image_url: String,
+    pub nonce: u64,
 }
 impl Listing {
-    pub const SIZE: usize = 32 + 32 + 32 + 8 + 4 + 1 + 1 + 1 + (4 + 100) + (4 + 200);
+    pub const SIZE: usize = 8 + 32 + 32 + 32 + 8 + 4 + 1 + 1 + 1 + 104 + 204 + 8;
 }
 
 #[account]
@@ -545,8 +561,10 @@ pub struct SetMerchantStatus<'info> {
     pub authority: Signer<'info>,
 }
 
+
 #[derive(Accounts)]
 pub struct CreateListing<'info> {
+    #[account(mut)]
     pub marketplace: Account<'info, Marketplace>,
     #[account(mut, has_one = marketplace, has_one = owner)]
     pub merchant: Account<'info, Merchant>,
@@ -556,7 +574,7 @@ pub struct CreateListing<'info> {
         init,
         payer = owner,
         space = 8 + Listing::SIZE,
-        seeds = [b"listing", marketplace.key().as_ref(), merchant.key().as_ref(), mint.key().as_ref()],
+        seeds = [b"listing", merchant.key().as_ref(), &merchant.next_nonce.to_le_bytes()],
         bump
     )]
     pub listing: Account<'info, Listing>,

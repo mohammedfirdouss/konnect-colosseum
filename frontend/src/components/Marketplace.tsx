@@ -154,7 +154,7 @@ export default function Marketplace() {
 
       // create
       const sig = await program.methods
-        .createListing(new BN(price * LAMPORTS_PER_SOL), qty, false)
+        .createListing(new BN(price * LAMPORTS_PER_SOL), qty, false, name, imageUrl)
         .accounts({
           marketplace: MARKETPLACE_PDA,
           merchant: merchantPda,
