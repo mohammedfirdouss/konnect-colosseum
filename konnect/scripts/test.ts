@@ -143,9 +143,11 @@ async function main() {
   } catch {
     const priceLamports = new anchor.BN(100_000);
     const quantity = 10;
+    const name = "Testone yh";
+    const imageUrl = "https://somerandomtestimage.com/image.png";
 
     const tx = await program.methods
-      .createListing(priceLamports, quantity, false)
+      .createListing(priceLamports, quantity, false, name, imageUrl)
       .accounts({
         marketplace: marketplacePda,
         merchant: merchantPda,
@@ -156,6 +158,8 @@ async function main() {
       } as any)
       .rpc();
     console.log(`Listing created! Transaction: ${tx}`);
+    console.log(`Name: ${name}`);
+    console.log(`Image URL: ${imageUrl}`);
     console.log(`Price: 0.1 tokens`);
     console.log(`Quantity: ${quantity}\n`);
   }
@@ -174,6 +178,8 @@ async function main() {
     console.log(`Found ${allListings.length} listing(s):\n`);
       allListings.forEach((listing: any, idx: number) => {
         console.log(`Listing #${idx + 1}:`);
+        console.log(`Name: ${listing.account.name}`);
+        console.log(`Image URL: ${listing.account.image_url}`);
         console.log(`PDA: ${listing.publicKey.toString()}`);
         console.log(`Seller: ${listing.account.seller.toString()}`);
         console.log(`Mint: ${listing.account.mint.toString()}`);

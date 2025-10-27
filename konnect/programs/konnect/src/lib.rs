@@ -52,6 +52,8 @@ pub mod konnect {
         price: u64,
         quantity: u32,
         is_service: bool,
+        name: String,
+        image_url: String,
     ) -> Result<()> {
         require!(price > 0, MarketplaceError::InvalidAmount);
         let l = &mut ctx.accounts.listing;
@@ -63,6 +65,8 @@ pub mod konnect {
         l.is_service = is_service;
         l.active = true;
         l.bump = ctx.bumps.listing;
+        l.name = name;
+        l.image_url = image_url;
         Ok(())
     }
 
@@ -394,9 +398,11 @@ pub struct Listing {
     pub is_service: bool,
     pub active: bool,
     pub bump: u8,
+    pub name: String,
+    pub image_url: String,
 }
 impl Listing {
-    pub const SIZE: usize = 32 + 32 + 32 + 8 + 4 + 1 + 1 + 1;
+    pub const SIZE: usize = 32 + 32 + 32 + 8 + 4 + 1 + 1 + 1 + (4 + 100) + (4 + 200);
 }
 
 #[account]
