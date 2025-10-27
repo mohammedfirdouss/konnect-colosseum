@@ -8,7 +8,6 @@ declare_id!("mbLjS3jLDX74Ptza9EiiG4qcPPE9aPS7EzifCLZc5hJ");
 pub mod konnect {
     use super::*;
 
-    // Marketplace management
     pub fn init_marketplace(ctx: Context<InitMarketplace>, fee_bps: u16) -> Result<()> {
         require!(fee_bps <= 1_000, MarketplaceError::FeeTooHigh); // max 10%
         let mp = &mut ctx.accounts.marketplace;
@@ -33,7 +32,6 @@ pub mod konnect {
         Ok(())
     }
 
-    // merchant flow
     pub fn register_merchant(ctx: Context<RegisterMerchant>) -> Result<()> {
         let m = &mut ctx.accounts.merchant;
         m.marketplace = ctx.accounts.marketplace.key();
@@ -44,12 +42,11 @@ pub mod konnect {
     }
 
     pub fn set_merchant_status(ctx: Context<SetMerchantStatus>, verified: bool) -> Result<()> {
-        // only marketplace authority can call (enforced via context)
         ctx.accounts.merchant.verified = verified;
         Ok(())
     }
 
-    // listings
+    
     pub fn create_listing(
         ctx: Context<CreateListing>,
         price: u64,
@@ -89,9 +86,7 @@ pub mod konnect {
         Ok(())
     }
 
-    // (Buy-now flow)
-    // note: reference is solana pay reference pubkey (off-chain generates it and includes it in tx metas)
-    // the client must pass the same reference as the first remaining_account (readonly) when calling
+    // buy now flow
     pub fn buy_now(ctx: Context<BuyNow>, quantity: u32, reference: Pubkey) -> Result<()> {
         let l = &mut ctx.accounts.listing;
 
@@ -99,14 +94,12 @@ pub mod konnect {
         require!(!l.is_service, MarketplaceError::WrongFlowForService);
         require!(quantity > 0 && quantity <= l.quantity, MarketplaceError::InvalidQuantity);
 
-        // enforce reference presence in transaction metas for Solana Pay correlation
         let reference_account = ctx
             .remaining_accounts
             .get(0)
             .ok_or(MarketplaceError::MissingReference)?;
         require!(reference_account.key() == reference, MarketplaceError::WrongReference);
 
-        // Basic ATA checks: ensure seller_ata belongs to the listing.seller and has the proper mint.
         require!(
             ctx.accounts.seller_ata.owner == l.seller && ctx.accounts.seller_ata.mint == l.mint,
             MarketplaceError::InvalidAccount
@@ -124,7 +117,6 @@ pub mod konnect {
             .checked_sub(fee)
             .ok_or(MarketplaceError::MathOverflow)?;
 
-        // buyer -> seller
         token::transfer(
             CpiContext::new(
                 ctx.accounts.token_program.to_account_info(),
@@ -137,7 +129,6 @@ pub mod konnect {
             seller_amount,
         )?;
 
-        // buyer -> treasury (fee)
         if fee > 0 {
             token::transfer(
                 CpiContext::new(
@@ -160,7 +151,6 @@ pub mod konnect {
             l.active = false;
         }
 
-        // Event for indexers / off-chain reconciliation
         emit!(OrderCompleted {
             marketplace: ctx.accounts.marketplace.key(),
             listing: l.key(),
@@ -175,13 +165,7 @@ pub mod konnect {
         Ok(())
     }
 
-    // ------------------------
     // Services (escrow)
-    // ------------------------
-    //
-    // create_service_order:
-    // - buyer pays into vault ATA owned by escrow PDA
-    // - escrow account stores reference so off-chain can match
     pub fn create_service_order(ctx: Context<CreateServiceOrder>, reference: Pubkey) -> Result<()> {
         let l = &ctx.accounts.listing;
         require!(l.active, MarketplaceError::ListingInactive);
@@ -196,7 +180,6 @@ pub mod konnect {
 
         let total_price = l.price;
 
-        // Transfer buyer -> vault (vault is ATA owned by escrow PDA)
         token::transfer(
             CpiContext::new(
                 ctx.accounts.token_program.to_account_info(),
@@ -238,17 +221,15 @@ pub mod konnect {
 
     // release funds from escrow to seller (can be called by buyer or marketplace authority via ctx enforcement)
     pub fn release_service_order(ctx: Context<ReleaseServiceOrder>) -> Result<()> {
-        // 1. Validation (immutable borrow)
         require!(
             !ctx.accounts.escrow.released,
             MarketplaceError::AlreadyReleased
         );
 
-        // 2. Extract values we need
         let bump = ctx.accounts.escrow.bump;
         let amount = ctx.accounts.escrow.amount;
         let listing = ctx.accounts.escrow.listing;
-        let buyer_key = ctx.accounts.buyer.key();
+        let buyer_key = ctx.accounts.escrow.buyer;
         let fee_bps = ctx.accounts.escrow.get_fee_bps(&ctx.accounts.marketplace)?;
 
         let fee = amount
@@ -257,7 +238,6 @@ pub mod konnect {
             / 10_000;
         let seller_amount = amount.checked_sub(fee).ok_or(MarketplaceError::MathOverflow)?;
 
-        // 3. Signer seeds
         let seeds: &[&[u8]] = &[
             b"escrow",
             listing.as_ref(),
@@ -266,7 +246,6 @@ pub mod konnect {
         ];
         let signer = &[seeds];
 
-        // 4. CPI: vault -> seller
         token::transfer(
             CpiContext::new_with_signer(
                 ctx.accounts.token_program.to_account_info(),
@@ -280,7 +259,6 @@ pub mod konnect {
             seller_amount,
         )?;
 
-        // 5. CPI: vault -> treasury (fee)
         if fee > 0 {
             token::transfer(
                 CpiContext::new_with_signer(
@@ -292,11 +270,10 @@ pub mod konnect {
                     },
                     signer,
                 ),
-                fee,
+                    fee,
             )?;
         }
 
-        // 6. CPI: close vault (refund rent to buyer)
         token::close_account(
             CpiContext::new_with_signer(
                 ctx.accounts.token_program.to_account_info(),
@@ -309,11 +286,9 @@ pub mod konnect {
             ),
         )?;
 
-        // 7. Mutate escrow after CPI calls
         let e = &mut ctx.accounts.escrow;
         e.released = true;
 
-        // 8. Emit event
         emit!(ServiceOrderReleased {
             marketplace: ctx.accounts.marketplace.key(),
             escrow: e.key(),
@@ -329,19 +304,16 @@ pub mod konnect {
 
     // cancel/refund escrow back to buyer (can be called by marketplace authority or buyer depending on your policy)
     pub fn cancel_service_order(ctx: Context<CancelServiceOrder>) -> Result<()> {
-        // 1. Validation (only immutable borrow here)
         require!(
             !ctx.accounts.escrow.released,
             MarketplaceError::AlreadyReleased
         );
 
-        // 2. Extract what you need into locals
         let bump = ctx.accounts.escrow.bump;
         let amount = ctx.accounts.escrow.amount;
         let listing = ctx.accounts.escrow.listing;
-        let buyer_key = ctx.accounts.buyer.key();
+        let buyer_key = ctx.accounts.escrow.buyer;
 
-        // 3. Build signer seeds
         let seeds: &[&[u8]] = &[
             b"escrow",
             listing.as_ref(),
@@ -350,7 +322,6 @@ pub mod konnect {
         ];
         let signer = &[seeds];
 
-        // 4. CPI: vault -> buyer
         token::transfer(
             CpiContext::new_with_signer(
                 ctx.accounts.token_program.to_account_info(),
@@ -364,7 +335,6 @@ pub mod konnect {
             amount,
         )?;
 
-        // 5. CPI: close vault (refund rent)
         token::close_account(
             CpiContext::new_with_signer(
                 ctx.accounts.token_program.to_account_info(),
@@ -377,11 +347,9 @@ pub mod konnect {
             ),
         )?;
 
-        // 6. Finally, mutate escrow
         let e = &mut ctx.accounts.escrow;
         e.released = true;
 
-        // 7. Emit event
         emit!(ServiceOrderCancelled {
             marketplace: ctx.accounts.marketplace.key(),
             escrow: e.key(),
@@ -394,9 +362,7 @@ pub mod konnect {
     }
 }
 
-// ========================
-// Accounts (state)
-// ========================
+
 #[account]
 pub struct Marketplace {
     pub authority: Pubkey,
@@ -449,9 +415,7 @@ impl Escrow {
     pub const SIZE: usize = 32 + 32 + 32 + 32 + 32 + 8 + 32 + 1 + 1;
 }
 
-// ========================
 // Events
-// ========================
 #[event]
 pub struct OrderCompleted {
     pub marketplace: Pubkey,
@@ -496,9 +460,7 @@ pub struct ServiceOrderCancelled {
     pub reference: Pubkey,
 }
 
-// ========================
-// Errors
-// ========================
+// Errs
 #[error_code]
 pub enum MarketplaceError {
     #[msg("Fee too high (max 10%)")]
@@ -527,9 +489,7 @@ pub enum MarketplaceError {
     WrongReference,
 }
 
-// ========================
-// Contexts (instruction account constraints)
-// ========================
+// Contexts
 #[derive(Accounts)]
 #[instruction(fee_bps: u16)]
 pub struct InitMarketplace<'info> {
@@ -613,13 +573,10 @@ pub struct BuyNow<'info> {
     pub marketplace: Account<'info, Marketplace>,
     #[account(mut)]
     pub buyer: Signer<'info>,
-    // Buyer ATA for `mint`
     #[account(mut, token::mint = mint, token::authority = buyer)]
     pub buyer_ata: Account<'info, TokenAccount>,
-    // Seller ATA (we validate owner & mint in instruction)
     #[account(mut)]
     pub seller_ata: Account<'info, TokenAccount>,
-    // Treasury ATA must be an ATA for mint with authority = marketplace.authority
     #[account(mut, token::mint = mint, token::authority = marketplace.authority)]
     pub treasury_ata: Account<'info, TokenAccount>,
     pub mint: Account<'info, Mint>,
@@ -635,7 +592,6 @@ pub struct CreateServiceOrder<'info> {
     pub buyer: Signer<'info>,
     #[account(mut, token::mint = mint, token::authority = buyer)]
     pub buyer_ata: Account<'info, TokenAccount>,
-    // Escrow PDA: seeds = ["escrow", listing.key(), buyer.key()]
     #[account(
         init,
         payer = buyer,
@@ -644,7 +600,6 @@ pub struct CreateServiceOrder<'info> {
         bump
     )]
     pub escrow: Account<'info, Escrow>,
-    // Vault ATA owned by escrow PDA
     #[account(
         init,
         payer = buyer,
@@ -660,46 +615,45 @@ pub struct CreateServiceOrder<'info> {
 
 #[derive(Accounts)]
 pub struct ReleaseServiceOrder<'info> {
-    #[account(mut, has_one = marketplace, has_one = buyer)]
+    #[account(mut, has_one = marketplace)]
     pub escrow: Account<'info, Escrow>,
     pub marketplace: Account<'info, Marketplace>,
     pub listing: Account<'info, Listing>,
-    // signer can be buyer or specific authority in your UI flow (enforce off-chain or via extra account)
-    #[account(mut)]
-    pub buyer: Signer<'info>,
-    // Seller ATA to receive funds (we validate owner & mint)
+    #[account(constraint = payer.key() == escrow.buyer || payer.key() == marketplace.authority)]
+    pub payer: Signer<'info>,
+    /// CHECK: destination for vault rent, verified via constraint
+    #[account(mut, constraint = buyer.key() == escrow.buyer @ MarketplaceError::InvalidAccount)]
+    pub buyer: UncheckedAccount<'info>,
     #[account(mut)]
     pub seller_ata: Account<'info, TokenAccount>,
-    // Treasury ATA to receive fees (must be mint ATA for marketplace.authority)
     #[account(mut, token::mint = escrow.mint, token::authority = marketplace.authority)]
     pub treasury_ata: Account<'info, TokenAccount>,
-    // vault ATA (owned by escrow PDA). close = buyer will transfer rent to buyer when closed.
     #[account(mut, token::authority = escrow, close = buyer)]
     pub vault: Account<'info, TokenAccount>,
     pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
 }
 
+//Backend can cancel, rent refunded
 #[derive(Accounts)]
 pub struct CancelServiceOrder<'info> {
-    // Close escrow to buyer (this will refund rent to buyer)
-    #[account(mut, has_one = buyer, close = buyer)]
+    #[account(mut)]
     pub escrow: Account<'info, Escrow>,
     pub marketplace: Account<'info, Marketplace>,
-    #[account(mut)]
-    pub buyer: Signer<'info>,
-    #[account(mut, token::mint = escrow.mint, token::authority = buyer)]
+    #[account(constraint = payer.key() == escrow.buyer || payer.key() == marketplace.authority)]
+    pub payer: Signer<'info>,
+    /// CHECK: destination for vault rent, verified via constraint
+    #[account(mut, constraint = buyer.key() == escrow.buyer @ MarketplaceError::InvalidAccount)]
+    pub buyer: UncheckedAccount<'info>,
+    #[account(mut, token::mint = escrow.mint, token::authority = escrow.buyer)]
     pub buyer_ata: Account<'info, TokenAccount>,
     #[account(mut, token::authority = escrow, close = buyer)]
     pub vault: Account<'info, TokenAccount>,
     pub token_program: Program<'info, Token>,
 }
 
-// ========================
-// Helpers
-// ========================
+
 impl Listing {
-    // Accept Account<Marketplace> so callers can pass ctx.accounts.marketplace
     pub fn get_fee_bps(&self, mp: &Account<Marketplace>) -> Result<u16> {
         require!(self.marketplace == mp.key(), MarketplaceError::WrongMarketplace);
         Ok(mp.fee_bps)
