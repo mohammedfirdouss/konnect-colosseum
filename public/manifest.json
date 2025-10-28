@@ -1,0 +1,22 @@
+{
+  "name": "Konnect - Campus Economy Hub",
+  "short_name": "Konnect",
+  "description": "Buy, sell, and manage your campus economy with Konnect",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#121212",
+  "theme_color": "#9945FF",
+  "orientation": "portrait",
+  "icons": [
+   
+  ],
+  "categories": ["finance", "marketplace", "social"],
+  "screenshots": [
+    {
+      "src": "/screenshot-mobile.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "form_factor": "narrow"
+    }
+  ]
+}
