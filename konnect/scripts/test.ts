@@ -4,11 +4,14 @@ import { Konnect } from "../target/types/konnect";
 import { PublicKey, Keypair } from "@solana/web3.js";
 import {
   TOKEN_PROGRAM_ID,
+  ASSOCIATED_TOKEN_PROGRAM_ID,
+  NATIVE_MINT,
   createMint,
   mintTo,
   getAssociatedTokenAddressSync,
   createAssociatedTokenAccountInstruction,
   getAccount,
+  createSyncNativeInstruction,
 } from "@solana/spl-token";
 import { readFileSync } from "fs";
 
@@ -33,7 +36,7 @@ async function main() {
   anchor.setProvider(provider);
 
   // Load IDL
-  const idlPath = "target/idl/konnect.json";
+  const idlPath = "../target/idl/konnect.json";
   idl = JSON.parse(readFileSync(idlPath, "utf-8"));
 
   const programId = new PublicKey("mbLjS3jLDX74Ptza9EiiG4qcPPE9aPS7EzifCLZc5hJ");
@@ -230,8 +233,8 @@ async function main() {
     console.log(`Error creating listing: ${err.message}`);
   }
 
-  //create second listing
-  console.log("\nCreating second listing...");
+  //create service listing
+  console.log("\nCreating service listing...");
   const merchantAccount2 = await program.account.merchant.fetch(merchantPda);
   const nonce2 = merchantAccount2.nextNonce;
   console.log("Using nonce from merchant account:", nonce2.toNumber());
@@ -239,27 +242,27 @@ async function main() {
   const nonceBytes2 = Buffer.allocUnsafe(8);
   nonceBytes2.writeBigUInt64LE(BigInt(nonce2.toNumber()), 0);
   
-  const [listingPda2, listingBump2] = anchor.web3.PublicKey.findProgramAddressSync(
+  const [servicePda, serviceBump] = anchor.web3.PublicKey.findProgramAddressSync(
     [Buffer.from("listing"), merchantPda.toBuffer(), nonceBytes2],
     program.programId
   );
   
   try {
     const tx2 = await program.methods
-      .createListing(new anchor.BN(200_000), 5, false, "Second Product", "https://image2.com")
+      .createListing(new anchor.BN(500_000), 1, true, "Web Dev", "https://image2.com")
       .accounts({
         marketplace: marketplacePda,
         merchant: merchantPda,
-        listing: listingPda2,
+        listing: servicePda,
         owner: merchantWallet,
         mint: mint,
         systemProgram: anchor.web3.SystemProgram.programId,
       } as any)
       .signers([merchantKeypair])
       .rpc();
-    console.log(`Second listing created! Transaction: ${tx2}`);
+    console.log(`Service listing created! Transaction: ${tx2}`);
   } catch (err: any) {
-    console.log(`Error creating second listing: ${err.message}`);
+    console.log(`Error creating service listing: ${err.message}`);
   }
 
   //fetch all listings by PDA directly
@@ -363,11 +366,220 @@ async function main() {
     console.log(`Buy failed: ${error.message}`);
   }
 
-  // escrow release process: backend can sign as payer
-  //rent goes to buyer via UncheckedAccount
-  //Seller receives funds minus fee
-  //treasury receives marketplace fee
-  //escrow marked as released
+  // Create service order with escrow
+  console.log("\nCREATINg servicce order for just token");
+  
+  // Derive escrow PDA
+  const [escrowPda] = anchor.web3.PublicKey.findProgramAddressSync(
+    [Buffer.from("escrow"), servicePda.toBuffer(), wallet.publicKey.toBuffer()],
+    program.programId
+  );
+  
+  // Get vault ATA (owned by escrow)
+  const vaultAta = getAssociatedTokenAddressSync(mint, escrowPda, true);
+  
+  // Generate reference for Solana Pay
+  const serviceReference = anchor.web3.Keypair.generate().publicKey;
+  console.log(`Service Reference: ${serviceReference.toString()}`);
+  console.log(`Escrow PDA: ${escrowPda.toString()}`);
+  console.log(`Vault ATA: ${vaultAta.toString()}`);
+  
+  try {
+    const tx = await program.methods
+      .createServiceOrder(serviceReference)
+      .accounts({
+        marketplace: marketplacePda,
+        listing: servicePda,
+        buyer: wallet.publicKey,
+        buyerAta: buyerAta,
+        escrow: escrowPda,
+        vault: vaultAta,
+        mint: mint,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      } as any)
+      .remainingAccounts([
+        { pubkey: serviceReference, isWritable: false, isSigner: false }
+      ])
+      .rpc();
+    
+    console.log(`Service order created! Transaction: ${tx}`);
+    console.log(`Funds transferred to escrow vault`);
+    
+    // Fetch escrow account
+    const escrowAccount = await program.account.escrow.fetch(escrowPda);
+    console.log(`Escrow amount: ${escrowAccount.amount.toNumber() / 1e6} tokens`);
+    console.log(`Released: ${escrowAccount.released}`);
+    console.log(`Buyer: ${escrowAccount.buyer.toString()}`);
+    console.log(`Seller: ${escrowAccount.seller.toString()}\n`);
+    
+  } catch (error: any) {
+    console.log(`Service order creation failed: ${error.message}`);
+    if (error.logs) {
+      console.log("Program logs:");
+      error.logs.forEach((log: string) => console.log(log));
+    }
+  }
+  
+  console.log("\nservice order flow completed");
+  console.log("Next:");
+  console.log("-Seller completes the service");
+  console.log("-Buyer or marketplace calls release_service_order");
+  console.log("-Funds released to seller (minus marketplace fee)");
+  console.log("-Escrow marked as released");
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  //WSOL create order
+  //using wrapped sol
+  console.log("\n\nwsol");
+  
+  // Fund merchant walet more for additional listing
+  const additionalFundTx = new anchor.web3.Transaction().add(
+    anchor.web3.SystemProgram.transfer({
+      fromPubkey: wallet.publicKey,
+      toPubkey: merchantWallet,
+      lamports: 5_000_000, // 0.005 SOL for listing rent
+    })
+  );
+  await anchor.web3.sendAndConfirmTransaction(connection, additionalFundTx, [walletKeypair]);
+  console.log("Funded merchant wallet for WSOL listing");
+  
+  const merchantAccount3 = await program.account.merchant.fetch(merchantPda);
+  const nonce3 = merchantAccount3.nextNonce;
+  console.log("Using nonce from merchant account:", nonce3.toNumber());
+  
+  const nonceBytes3 = Buffer.allocUnsafe(8);
+  nonceBytes3.writeBigUInt64LE(BigInt(nonce3.toNumber()), 0);
+  
+  const [wsolServicePda] = anchor.web3.PublicKey.findProgramAddressSync(
+    [Buffer.from("listing"), merchantPda.toBuffer(), nonceBytes3],
+    program.programId
+  );
+  
+  const wsolPrice = new anchor.BN(100_000_000);
+  
+  try {
+    const tx3 = await program.methods
+      .createListing(wsolPrice, 1, true, "hi vida", "randomimage.png")
+      .accounts({
+        marketplace: marketplacePda,
+        merchant: merchantPda,
+        listing: wsolServicePda,
+        owner: merchantWallet,
+        mint: NATIVE_MINT,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      } as any)
+      .signers([merchantKeypair])
+      .rpc();
+    console.log(`WSOL service listing created! Transaction: ${tx3}`);
+    console.log(`Price: 0.1 SOL (${wsolPrice.toNumber() / 1e9} SOL)`);
+  } catch (err: any) {
+    console.log(`Error creating WSOL service listing: ${err.message}`);
+  }
+  
+  // buyer process for wsol
+  console.log("\nPreparing WSOL for buyer...");
+  const buyerWsolAta = getAssociatedTokenAddressSync(NATIVE_MINT, wallet.publicKey);
+  
+  const wsolAmount = 150_000_000; // 0.15 SOL (more than listing price just fpr safety)
+  
+  try {
+    await getAccount(connection, buyerWsolAta);
+    console.log("Buyer WSOL account already exists");
+  } catch {
+    // Create WSOL account and transfer SOL to it
+    const createWsolAtaIx = createAssociatedTokenAccountInstruction(
+      wallet.publicKey,
+      buyerWsolAta,
+      wallet.publicKey,
+      NATIVE_MINT
+    );
+    
+    const transferIx = anchor.web3.SystemProgram.transfer({
+      fromPubkey: wallet.publicKey,
+      toPubkey: buyerWsolAta,
+      lamports: wsolAmount,
+    });
+    
+    const syncIx = createSyncNativeInstruction(buyerWsolAta);
+    
+    const tx = new anchor.web3.Transaction()
+      .add(createWsolAtaIx)
+      .add(transferIx)
+      .add(syncIx);
+    
+    await anchor.web3.sendAndConfirmTransaction(connection, tx, [walletKeypair]);
+    console.log(`Wrapped ${wsolAmount / 1e9} SOL for buyer`);
+  }
+  
+  // creating service order for wsol
+  console.log("\ncreating service order");
+  
+  const [wsolEscrowPda] = anchor.web3.PublicKey.findProgramAddressSync(
+    [Buffer.from("escrow"), wsolServicePda.toBuffer(), wallet.publicKey.toBuffer()],
+    program.programId
+  );
+  
+  const wsolVaultAta = getAssociatedTokenAddressSync(NATIVE_MINT, wsolEscrowPda, true);
+  const wsolServiceReference = anchor.web3.Keypair.generate().publicKey;
+  
+  console.log(`WSOL Service Reference: ${wsolServiceReference.toString()}`);
+  console.log(`WSOL Escrow PDA: ${wsolEscrowPda.toString()}`);
+  console.log(`WSOL Vault ATA: ${wsolVaultAta.toString()}`);
+  
+  try {
+    const tx = await program.methods
+      .createServiceOrder(wsolServiceReference)
+      .accounts({
+        marketplace: marketplacePda,
+        listing: wsolServicePda,
+        buyer: wallet.publicKey,
+        buyerAta: buyerWsolAta,
+        escrow: wsolEscrowPda,
+        vault: wsolVaultAta,
+        mint: NATIVE_MINT,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      } as any)
+      .remainingAccounts([
+        { pubkey: wsolServiceReference, isWritable: false, isSigner: false }
+      ])
+      .rpc();
+    
+    console.log(`WSOL service order created! Transaction: ${tx}`);
+    console.log(`0.1 SOL locked in escrow`);
+    
+    const wsolEscrowAccount = await program.account.escrow.fetch(wsolEscrowPda);
+    console.log(`Escrow amount: ${wsolEscrowAccount.amount.toNumber() / 1e9} SOL`);
+    console.log(`Released: ${wsolEscrowAccount.released}`);
+    console.log(`Buyer: ${wsolEscrowAccount.buyer.toString()}`);
+    console.log(`Seller: ${wsolEscrowAccount.seller.toString()}\n`);
+    
+  } catch (error: any) {
+    console.log(`WSOL service order creation failed: ${error.message}`);
+    if (error.logs) {
+      console.log("Program logs:");
+      error.logs.forEach((log: string) => console.log(log));
+    }
+  }
 }
 
 main().catch((err) => {
