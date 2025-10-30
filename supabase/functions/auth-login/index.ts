@@ -1,4 +1,5 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { handleCors, createSupabaseClient, errorResponse } from '../_shared/utils.ts';
 
 serve(async (req) => {
@@ -12,7 +13,11 @@ serve(async (req) => {
       return errorResponse('Email and password are required', 400);
     }
 
-    const supabaseClient = createSupabaseClient(req);
+    // Create a client without auth for login (using anon key)
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+    );
 
     const { data, error } = await supabaseClient.auth.signInWithPassword({
       email,
@@ -24,9 +29,15 @@ serve(async (req) => {
     }
 
     // Create a new client with the user's access token to fetch the profile
-    const supabaseClientWithAuth = createSupabaseClient(new Request(req.url, {
-      headers: { Authorization: `Bearer ${data.session.access_token}` },
-    }));
+    const supabaseClientWithAuth = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      {
+        global: {
+          headers: { Authorization: `Bearer ${data.session.access_token}` },
+        },
+      }
+    );
 
     // Fetch user profile
     const { data: profile } = await supabaseClientWithAuth

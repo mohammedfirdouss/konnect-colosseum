@@ -40,9 +40,24 @@ serve(async (req) => {
         return errorResponse('Unauthorized to deliver this order', 403);
       }
 
-      // Validate delivery code (in production, this would be more secure)
-      if (order.delivery_code && order.delivery_code !== delivery_code) {
+      // Validate delivery code exists
+      if (!order.delivery_code) {
+        return errorResponse('No delivery code has been generated for this order. Buyer must generate a delivery code first.', 400);
+      }
+
+      // Validate delivery code matches
+      if (order.delivery_code !== delivery_code) {
         return errorResponse('Invalid delivery code', 400);
+      }
+
+      // Check if order is already completed
+      if (order.status === 'completed') {
+        return errorResponse('Order is already completed', 400);
+      }
+
+      // Ensure order is in ongoing status
+      if (order.status !== 'ongoing') {
+        return errorResponse(`Cannot complete delivery for order with status: ${order.status}`, 400);
       }
 
       // Update order status to completed

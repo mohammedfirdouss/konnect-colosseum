@@ -21,7 +21,7 @@ serve(async (req) => {
 
       const { data, error } = await supabaseClient
         .from('orders')
-        .select('*, item:items(*), buyer:users(username, email)')
+        .select('*, item:items(*), buyer:users!orders_buyer_id_fkey(username, email)')
         .eq('seller_id', user.id)
         .order('created_at', { ascending: false });
 
