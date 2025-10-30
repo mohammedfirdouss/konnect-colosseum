@@ -78,7 +78,7 @@ const MarketplaceProducts = () => {
           id: product.id,
           name: product.name,
           price: product.price,
-          seller: product.seller,
+          seller: product.seller || "",
           category: product.category,
           image: product.image,
           type,

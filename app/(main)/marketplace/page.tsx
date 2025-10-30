@@ -4,17 +4,17 @@ import { useSearchParams } from 'next/navigation';
 import { useUser } from '@/contexts/UserContext';
 import { useMarketplace } from '@/hooks/useMarketplace';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { toast } from 'sonner';
-import SellerListings from '@/components/SellerListings';
-import MarketplaceProducts from '@/components/MarketplaceProducts';
+import { useState, useEffect, Suspense } from "react";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { toast } from "sonner";
+import SellerListings from "@/components/SellerListings";
+import MarketplaceProducts from "@/components/MarketplaceProducts";
 
-export default function MarketplacePage() {
+function MarketplaceContent() {
   const { user } = useUser();
   const searchParams = useSearchParams();
-  const searchQuery = searchParams.get('q') || '';
+  const searchQuery = searchParams.get("q") || "";
   console.log("user", user?.role);
   const isSeller = user?.role === "seller" || user?.role === "both";
 
@@ -26,54 +26,63 @@ export default function MarketplacePage() {
   const [isInitialized, setIsInitialized] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
-
   const handleInitMarketplace = async () => {
     try {
-      console.log('Starting marketplace initialization...');
-      toast.loading('Initializing marketplace...', { id: 'init-marketplace' });
-      
+      console.log("Starting marketplace initialization...");
+      toast.loading("Initializing marketplace...", { id: "init-marketplace" });
+
       // Initialize with 2% fee (200 basis points)
       const tx = await initMarketplace(200);
-      
+
       if (tx) {
-        console.log('Marketplace initialized successfully:', tx);
+        console.log("Marketplace initialized successfully:", tx);
         setIsInitialized(true);
-        
+
         // Show success message
-        toast.success('🎉 Marketplace initialized successfully!', { 
-          id: 'init-marketplace',
-          description: `Transaction: ${tx.slice(0, 8)}...${tx.slice(-8)}`
+        toast.success("🎉 Marketplace initialized successfully!", {
+          id: "init-marketplace",
+          description: `Transaction: ${tx.slice(0, 8)}...${tx.slice(-8)}`,
         });
-        
+
         // Refresh data after initialization to get updated stats
         // setTimeout(() => {
         //   refreshData();
         // }, 1000);
-      } else if (tx === 'already-initialized') {
-        console.log('Marketplace was already initialized');
+      } else if (tx === "already-initialized") {
+        console.log("Marketplace was already initialized");
         setIsInitialized(true);
-        toast.success('Marketplace was already initialized!', { id: 'init-marketplace' });
+        toast.success("Marketplace was already initialized!", {
+          id: "init-marketplace",
+        });
       }
     } catch (error: any) {
-      console.error('Failed to initialize marketplace:', error);
-      
+      console.error("Failed to initialize marketplace:", error);
+
       // Show user-friendly error message
-      if (error.message?.includes('User rejected')) {
-        toast.error('Transaction cancelled by user', { id: 'init-marketplace' });
-      } else if (error.message?.includes('insufficient funds')) {
-        toast.error('Insufficient SOL balance for transaction fees', { id: 'init-marketplace' });
-      } else if (error.message?.includes('already initialized')) {
-        toast.success('Marketplace was already initialized!', { id: 'init-marketplace' });
+      if (error.message?.includes("User rejected")) {
+        toast.error("Transaction cancelled by user", {
+          id: "init-marketplace",
+        });
+      } else if (error.message?.includes("insufficient funds")) {
+        toast.error("Insufficient SOL balance for transaction fees", {
+          id: "init-marketplace",
+        });
+      } else if (error.message?.includes("already initialized")) {
+        toast.success("Marketplace was already initialized!", {
+          id: "init-marketplace",
+        });
         setIsInitialized(true);
       } else {
-        toast.error(`Transaction failed: ${error.message}`, { id: 'init-marketplace' });
+        toast.error(`Transaction failed: ${error.message}`, {
+          id: "init-marketplace",
+        });
       }
     }
   };
 
-  
   // Get marketplace address
-  const marketplaceAddress = connected && publicKey ? getMarketplaceAddress(publicKey) : null;
+  const marketplaceAddress =
+    connected && publicKey ? getMarketplaceAddress(publicKey) : null;
 
   // Check if marketplace is initialized based on data
   // useEffect(() => {
@@ -160,5 +169,13 @@ export default function MarketplacePage() {
 
       {isSeller ? <SellerListings /> : <MarketplaceProducts />}
     </div>
+  );
+}
+
+export default function MarketplacePage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <MarketplaceContent />
+    </Suspense>
   );
 }

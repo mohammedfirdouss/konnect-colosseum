@@ -24,7 +24,7 @@ export function PWADebugInfo() {
 
   const clearDismissed = () => {
     localStorage.removeItem('pwa-install-dismissed');
-    setDebugInfo(prev => ({ ...prev, dismissed: null }));
+    setDebugInfo((prev: any) => ({ ...prev, dismissed: null }));
   };
 
   return (
