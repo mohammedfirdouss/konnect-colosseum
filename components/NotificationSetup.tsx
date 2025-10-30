@@ -14,7 +14,7 @@ export function NotificationSetup() {
 
   const handleComplete = () => {
     // Skip tutorial and go directly to marketplace hub (home) for all screen sizes
-    router.push('/home');
+    router.push("/marketplace");
   };
 
   return (

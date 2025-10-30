@@ -110,189 +110,226 @@ const MarketplaceProducts = () => {
         console.log("Total Goods:", allGoods.length, "Total Services:", allServices.length);
     }, [allListings]);
   return (
-    <div className={`${isMobile ? 'px-4' : 'px-8 max-w-7xl mx-auto'} py-6 space-y-6`}>
-    {/* Goods/Services Tabs */}
-    <Tabs value={activeCategory} onValueChange={(v) => setActiveCategory(v as 'goods' | 'services')}>
-      <div className="flex items-center justify-between mb-6">
-        <TabsList className={`${isMobile ? 'grid grid-cols-2' : 'inline-flex'}`} style={{ backgroundColor: '#1E1E1E' }}>
-          <TabsTrigger
-            value="goods"
-            className="px-8 py-2"
-            style={{
-              backgroundColor: activeCategory === 'goods' ? '#9945FF' : 'transparent',
-              color: activeCategory === 'goods' ? '#FFFFFF' : '#B3B3B3',
-            }}
+    <div
+      className={`${
+        isMobile ? "px-4" : "px-8 max-w-7xl mx-auto"
+      } py-6 space-y-6`}
+    >
+      {/* Goods/Services Tabs */}
+      <Tabs
+        value={activeCategory}
+        onValueChange={(v) => setActiveCategory(v as "goods" | "services")}
+      >
+        <div className="flex items-center justify-between mb-6">
+          <TabsList
+            className={`${isMobile ? "grid grid-cols-2" : "inline-flex"}`}
+            style={{ backgroundColor: "#1E1E1E" }}
           >
-            Goods
-          </TabsTrigger>
-          <TabsTrigger
-            value="services"
-            className="px-8 py-2"
-            style={{
-              backgroundColor: activeCategory === 'services' ? '#9945FF' : 'transparent',
-              color: activeCategory === 'services' ? '#FFFFFF' : '#B3B3B3',
-            }}
-          >
-            Services
-          </TabsTrigger>
-        </TabsList>
-      </div>
-
-      {/* Category Filters */}
-      <div className="flex gap-3 overflow-x-auto pb-4 mb-6 scrollbar-hide">
-        {currentCategories.map((cat) => (
-          <button
-            key={cat}
-            onClick={() => setSelectedSubCategory(cat)}
-            className="px-5 py-2 rounded-full whitespace-nowrap transition-all text-sm"
-            style={{
-              backgroundColor: selectedSubCategory === cat ? '#9945FF' : '#1E1E1E',
-              color: selectedSubCategory === cat ? '#FFFFFF' : '#B3B3B3',
-              border: selectedSubCategory === cat ? 'none' : '1px solid #333333',
-            }}
-          >
-            {cat}
-          </button>
-        ))}
-      </div>
-
-      {/* Loading State for Blockchain Data */}
-      {listingsLoading && (
-        <div className="text-center py-8">
-          <div className="inline-block w-8 h-8 border-4 border-[#9945FF] border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-[#B3B3B3] mt-4">Loading blockchain listings...</p>
-        </div>
-      )}
-
-      {/* Blockchain Listings Count */}
-      {!listingsLoading && allListings.length > 0 && (
-        <div className="mb-4 p-3 rounded-lg bg-[#9945FF]/10 border border-[#9945FF]/20">
-          <p className="text-sm text-center text-[#9945FF]">
-            🚀 {allListings.length} listing{allListings.length > 1 ? 's' : ''} from the blockchain
-          </p>
-        </div>
-      )}
-
-      {/* Goods Tab Content */}
-      <TabsContent value="goods" className="mt-0">
-        <div className={`grid gap-5 ${isMobile ? 'grid-cols-2' : 'grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'}`}>
-          {filteredGoods.map((item) => (
-            <Card
-              key={item.id}
-              className="overflow-hidden group cursor-pointer transition-all hover:shadow-lg hover:scale-105"
-              style={{ backgroundColor: '#1E1E1E', borderColor: '#333333' }}
-              onClick={() => router.push(`/product/${item.id}`)}
+            <TabsTrigger
+              value="goods"
+              className="px-8 py-2"
+              style={{
+                backgroundColor:
+                  activeCategory === "goods" ? "#9945FF" : "transparent",
+                color: activeCategory === "goods" ? "#FFFFFF" : "#B3B3B3",
+              }}
             >
-              <div className="relative aspect-square overflow-hidden">
-                <ImageWithFallback
-                  src={item.image}
-                  alt={item.name}
-                  className="w-full h-full object-cover transition-transform group-hover:scale-110"
-                />
-                <button
-                  className="absolute top-3 right-3 p-2 rounded-full transition-all backdrop-blur-sm"
-                  style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)' }}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <Heart size={16} style={{ color: '#FFFFFF' }} />
-                </button>
-              </div>
-              <div className="p-3 space-y-2">
-                <h3 className="text-sm truncate" style={{ color: '#FFFFFF' }}>
-                  {item.name}
-                </h3>
-                <div className="flex items-center gap-1">
-                  <Star size={14} fill="#FFBF00" style={{ color: '#FFBF00' }} />
-                  <span className="text-xs" style={{ color: '#FFBF00' }}>
-                    {item.rating}
-                  </span>
-                  <span className="text-xs ml-1" style={{ color: '#666666' }}>
-                    ({Math.floor(Math.random() * 500) + 100})
-                  </span>
-                </div>
-                <p className="text-sm" style={{ color: '#9945FF' }}>
-                  ₦{item.price.toLocaleString()}
-                </p>
-                <Button 
-                  className="w-full" 
-                  size="sm" 
-                  style={{ backgroundColor: '#9945FF', color: '#FFFFFF' }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleAddToCart(item, 'good');
-                  }}
-                >
-                  <ShoppingCart size={16} className="mr-2" />
-                  Add to Cart
-                </Button>
-              </div>
-            </Card>
+              Goods
+            </TabsTrigger>
+            <TabsTrigger
+              value="services"
+              className="px-8 py-2"
+              style={{
+                backgroundColor:
+                  activeCategory === "services" ? "#9945FF" : "transparent",
+                color: activeCategory === "services" ? "#FFFFFF" : "#B3B3B3",
+              }}
+            >
+              Services
+            </TabsTrigger>
+          </TabsList>
+        </div>
+
+        {/* Category Filters */}
+        <div className="flex gap-3 overflow-x-auto pb-4 mb-6 scrollbar-hide">
+          {currentCategories.map((cat) => (
+            <button
+              key={cat}
+              onClick={() => setSelectedSubCategory(cat)}
+              className="px-5 py-2 rounded-full whitespace-nowrap transition-all text-sm"
+              style={{
+                backgroundColor:
+                  selectedSubCategory === cat ? "#9945FF" : "#1E1E1E",
+                color: selectedSubCategory === cat ? "#FFFFFF" : "#B3B3B3",
+                border:
+                  selectedSubCategory === cat ? "none" : "1px solid #333333",
+              }}
+            >
+              {cat}
+            </button>
           ))}
         </div>
-      </TabsContent>
 
-      {/* Services Tab Content */}
-      <TabsContent value="services" className="mt-0">
-        <div className={`grid gap-5 ${isMobile ? 'grid-cols-2' : 'grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'}`}>
-          {filteredServices.map((item) => (
-            <Card
-              key={item.id}
-              className="overflow-hidden group cursor-pointer transition-all hover:shadow-lg hover:scale-105"
-              style={{ backgroundColor: '#1E1E1E', borderColor: '#333333' }}
-              onClick={() => router.push(`/product/${item.id}`)}
-            >
-              <div className="aspect-square flex items-center justify-center" style={{ backgroundColor: '#333333' }}>
-                <div className="text-center">
-                  <div
-                    className="w-20 h-20 rounded-full flex items-center justify-center mx-auto"
-                    style={{ backgroundColor: '#9945FF' }}
+        {/* Loading State for Blockchain Data */}
+        {listingsLoading && (
+          <div className="text-center py-8">
+            <div className="inline-block w-8 h-8 border-4 border-[#9945FF] border-t-transparent rounded-full animate-spin"></div>
+            <p className="text-[#B3B3B3] mt-4">Loading listings...</p>
+          </div>
+        )}
+
+        {/* Blockchain Listings Count */}
+        {!listingsLoading && allListings.length > 0 && (
+          <div className="mb-4 p-3 rounded-lg bg-[#9945FF]/10 border border-[#9945FF]/20">
+            <p className="text-sm text-center text-[#9945FF]">
+              🚀 {allListings.length} listing{allListings.length > 1 ? "s" : ""}{" "}
+            </p>
+          </div>
+        )}
+
+        {/* Goods Tab Content */}
+        <TabsContent value="goods" className="mt-0">
+          <div
+            className={`grid gap-5 ${
+              isMobile
+                ? "grid-cols-2"
+                : "grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
+            }`}
+          >
+            {filteredGoods.map((item) => (
+              <Card
+                key={item.id}
+                className="overflow-hidden group cursor-pointer transition-all hover:shadow-lg hover:scale-105"
+                style={{ backgroundColor: "#1E1E1E", borderColor: "#333333" }}
+                onClick={() => router.push(`/product/${item.id}`)}
+              >
+                <div className="relative aspect-square overflow-hidden">
+                  <ImageWithFallback
+                    src={item.image}
+                    alt={item.name}
+                    className="w-full h-full object-cover transition-transform group-hover:scale-110"
+                  />
+                  <button
+                    className="absolute top-3 right-3 p-2 rounded-full transition-all backdrop-blur-sm"
+                    style={{ backgroundColor: "rgba(0, 0, 0, 0.6)" }}
+                    onClick={(e) => e.stopPropagation()}
                   >
-                    <span className="text-3xl">
-                      {item.category === 'Education' && '📚'}
-                      {item.category === 'Design' && '🎨'}
-                      {item.category === 'Tech' && '💻'}
-                      {item.category === 'Media' && '📸'}
-                      {item.category === 'Transportation' && '🚗'}
+                    <Heart size={16} style={{ color: "#FFFFFF" }} />
+                  </button>
+                </div>
+                <div className="p-3 space-y-2">
+                  <h3 className="text-sm truncate" style={{ color: "#FFFFFF" }}>
+                    {item.name}
+                  </h3>
+                  <div className="flex items-center gap-1">
+                    <Star
+                      size={14}
+                      fill="#FFBF00"
+                      style={{ color: "#FFBF00" }}
+                    />
+                    <span className="text-xs" style={{ color: "#FFBF00" }}>
+                      {item.rating}
+                    </span>
+                    <span className="text-xs ml-1" style={{ color: "#666666" }}>
+                      ({Math.floor(Math.random() * 500) + 100})
                     </span>
                   </div>
+                  <p className="text-sm" style={{ color: "#9945FF" }}>
+                    ₦{item.price.toLocaleString()}
+                  </p>
+                  <Button
+                    className="w-full"
+                    size="sm"
+                    style={{ backgroundColor: "#9945FF", color: "#FFFFFF" }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleAddToCart(item, "good");
+                    }}
+                  >
+                    <ShoppingCart size={16} className="mr-2" />
+                    Add to Cart
+                  </Button>
                 </div>
-              </div>
-              <div className="p-3 space-y-2">
-                <h3 className="text-sm truncate" style={{ color: '#FFFFFF' }}>
-                  {item.name}
-                </h3>
-                <div className="flex items-center gap-1">
-                  <Star size={14} fill="#FFBF00" style={{ color: '#FFBF00' }} />
-                  <span className="text-xs" style={{ color: '#FFBF00' }}>
-                    {item.rating}
-                  </span>
-                  <span className="text-xs ml-1" style={{ color: '#666666' }}>
-                    ({Math.floor(Math.random() * 300) + 50})
-                  </span>
-                </div>
-                <p className="text-sm" style={{ color: '#9945FF' }}>
-                  ₦{item.price.toLocaleString()}
-                </p>
-                <Button 
-                  className="w-full" 
-                  size="sm" 
-                  style={{ backgroundColor: '#9945FF', color: '#FFFFFF' }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleAddToCart(item, 'service');
-                  }}
+              </Card>
+            ))}
+          </div>
+        </TabsContent>
+
+        {/* Services Tab Content */}
+        <TabsContent value="services" className="mt-0">
+          <div
+            className={`grid gap-5 ${
+              isMobile
+                ? "grid-cols-2"
+                : "grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
+            }`}
+          >
+            {filteredServices.map((item) => (
+              <Card
+                key={item.id}
+                className="overflow-hidden group cursor-pointer transition-all hover:shadow-lg hover:scale-105"
+                style={{ backgroundColor: "#1E1E1E", borderColor: "#333333" }}
+                onClick={() => router.push(`/product/${item.id}`)}
+              >
+                <div
+                  className="aspect-square flex items-center justify-center"
+                  style={{ backgroundColor: "#333333" }}
                 >
-                  <ShoppingCart size={16} className="mr-2" />
-                  Book Service
-                </Button>
-              </div>
-            </Card>
-          ))}
-        </div>
-      </TabsContent>
-    </Tabs>
-  </div>
-  )
+                  <div className="text-center">
+                    <div
+                      className="w-20 h-20 rounded-full flex items-center justify-center mx-auto"
+                      style={{ backgroundColor: "#9945FF" }}
+                    >
+                      <span className="text-3xl">
+                        {item.category === "Education" && "📚"}
+                        {item.category === "Design" && "🎨"}
+                        {item.category === "Tech" && "💻"}
+                        {item.category === "Media" && "📸"}
+                        {item.category === "Transportation" && "🚗"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div className="p-3 space-y-2">
+                  <h3 className="text-sm truncate" style={{ color: "#FFFFFF" }}>
+                    {item.name}
+                  </h3>
+                  <div className="flex items-center gap-1">
+                    <Star
+                      size={14}
+                      fill="#FFBF00"
+                      style={{ color: "#FFBF00" }}
+                    />
+                    <span className="text-xs" style={{ color: "#FFBF00" }}>
+                      {item.rating}
+                    </span>
+                    <span className="text-xs ml-1" style={{ color: "#666666" }}>
+                      ({Math.floor(Math.random() * 300) + 50})
+                    </span>
+                  </div>
+                  <p className="text-sm" style={{ color: "#9945FF" }}>
+                    ₦{item.price.toLocaleString()}
+                  </p>
+                  <Button
+                    className="w-full"
+                    size="sm"
+                    style={{ backgroundColor: "#9945FF", color: "#FFFFFF" }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleAddToCart(item, "service");
+                    }}
+                  >
+                    <ShoppingCart size={16} className="mr-2" />
+                    Book Service
+                  </Button>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
 }
 
 export default MarketplaceProducts

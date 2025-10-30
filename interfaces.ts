@@ -1,3 +1,5 @@
+import { UserRole } from "./contexts/UserContext";
+
 export interface Product {
     id: number | string;
     name: string;
@@ -40,4 +42,32 @@ export interface Product {
         deliveryCode?: string;
         acceptedDate?: string;
         type?: 'good' | 'service';
+  }
+
+
+  export interface RegisterUserRequest {
+    email: string;
+    password: string;
+    username: string;
+    role: UserRole;
+    solana_wallet_address: string;
+  }
+  
+  export interface RegisterUserResponse {
+    success: boolean;
+    message: string;
+    user?: {
+      id: string;
+      email: string;
+      username: string;
+      role: string;
+      solana_wallet_address: string;
+    };
+    error?: string;
+  }
+  
+  export interface ApiError {
+    success: false;
+    message: string;
+    error: string;
   }

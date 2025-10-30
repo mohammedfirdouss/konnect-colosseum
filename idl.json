@@ -1,7 +1,5 @@
 {
-  "address": "B5nTWLtcbWiMpG26vTMBdVMZw3DL2ewsXZid1SDGBZNa",
-  "version": "0.1.0",
-  "name": "konnect",
+  "address": "mbLjS3jLDX74Ptza9EiiG4qcPPE9aPS7EzifCLZc5hJ",
   "metadata": {
     "name": "konnect",
     "version": "0.1.0",
@@ -71,10 +69,12 @@
           "name": "marketplace"
         },
         {
+          "name": "payer",
+          "signer": true
+        },
+        {
           "name": "buyer",
-          "writable": true,
-          "signer": true,
-          "relations": ["escrow"]
+          "writable": true
         },
         {
           "name": "buyer_ata",
@@ -92,11 +92,112 @@
       "args": []
     },
     {
+      "name": "create_goods_order_with_escrow",
+      "discriminator": [139, 8, 93, 208, 250, 88, 141, 50],
+      "accounts": [
+        {
+          "name": "marketplace",
+          "relations": ["listing"]
+        },
+        {
+          "name": "listing",
+          "writable": true
+        },
+        {
+          "name": "buyer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "buyer_ata",
+          "writable": true
+        },
+        {
+          "name": "escrow",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [101, 115, 99, 114, 111, 119]
+              },
+              {
+                "kind": "account",
+                "path": "listing"
+              },
+              {
+                "kind": "account",
+                "path": "buyer"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "escrow"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6, 221, 246, 225, 215, 101, 161, 147, 217, 203, 225, 70, 206,
+                  235, 121, 172, 28, 180, 133, 237, 95, 91, 55, 145, 58, 140,
+                  245, 133, 126, 255, 0, 169
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140, 151, 37, 143, 78, 36, 137, 241, 187, 61, 16, 41, 20, 142,
+                13, 131, 11, 90, 19, 153, 218, 255, 16, 132, 4, 142, 123, 216,
+                219, 233, 248, 89
+              ]
+            }
+          }
+        },
+        {
+          "name": "mint"
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "associated_token_program",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "quantity",
+          "type": "u32"
+        },
+        {
+          "name": "reference",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
       "name": "create_listing",
       "discriminator": [18, 168, 45, 24, 191, 31, 117, 54],
       "accounts": [
         {
           "name": "marketplace",
+          "writable": true,
           "relations": ["merchant"]
         },
         {
@@ -120,15 +221,12 @@
               },
               {
                 "kind": "account",
-                "path": "marketplace"
-              },
-              {
-                "kind": "account",
                 "path": "merchant"
               },
               {
                 "kind": "account",
-                "path": "mint"
+                "path": "merchant.next_nonce",
+                "account": "Merchant"
               }
             ]
           }
@@ -153,6 +251,14 @@
         {
           "name": "is_service",
           "type": "bool"
+        },
+        {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "image_url",
+          "type": "string"
         }
       ]
     },
@@ -330,6 +436,53 @@
       "args": []
     },
     {
+      "name": "release_goods_order",
+      "discriminator": [84, 161, 175, 253, 239, 159, 243, 235],
+      "accounts": [
+        {
+          "name": "escrow",
+          "writable": true
+        },
+        {
+          "name": "marketplace",
+          "relations": ["escrow"]
+        },
+        {
+          "name": "listing",
+          "writable": true
+        },
+        {
+          "name": "payer",
+          "signer": true
+        },
+        {
+          "name": "buyer",
+          "writable": true
+        },
+        {
+          "name": "seller_ata",
+          "writable": true
+        },
+        {
+          "name": "treasury_ata",
+          "writable": true
+        },
+        {
+          "name": "vault",
+          "writable": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "release_service_order",
       "discriminator": [160, 33, 98, 120, 13, 105, 249, 205],
       "accounts": [
@@ -345,10 +498,12 @@
           "name": "listing"
         },
         {
+          "name": "payer",
+          "signer": true
+        },
+        {
           "name": "buyer",
-          "writable": true,
-          "signer": true,
-          "relations": ["escrow"]
+          "writable": true
         },
         {
           "name": "seller_ata",
@@ -482,6 +637,14 @@
   ],
   "events": [
     {
+      "name": "GoodsOrderCreated",
+      "discriminator": [54, 211, 162, 63, 203, 11, 80, 245]
+    },
+    {
+      "name": "GoodsOrderReleased",
+      "discriminator": [244, 243, 229, 149, 46, 12, 76, 220]
+    },
+    {
       "name": "OrderCompleted",
       "discriminator": [90, 77, 52, 248, 56, 233, 110, 197]
     },
@@ -591,6 +754,10 @@
             "type": "u64"
           },
           {
+            "name": "quantity",
+            "type": "u32"
+          },
+          {
             "name": "reference",
             "type": "pubkey"
           },
@@ -601,6 +768,90 @@
           {
             "name": "bump",
             "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "GoodsOrderCreated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "marketplace",
+            "type": "pubkey"
+          },
+          {
+            "name": "listing",
+            "type": "pubkey"
+          },
+          {
+            "name": "buyer",
+            "type": "pubkey"
+          },
+          {
+            "name": "seller",
+            "type": "pubkey"
+          },
+          {
+            "name": "mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "quantity",
+            "type": "u32"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "reference",
+            "type": "pubkey"
+          },
+          {
+            "name": "escrow",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "GoodsOrderReleased",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "marketplace",
+            "type": "pubkey"
+          },
+          {
+            "name": "escrow",
+            "type": "pubkey"
+          },
+          {
+            "name": "buyer",
+            "type": "pubkey"
+          },
+          {
+            "name": "seller",
+            "type": "pubkey"
+          },
+          {
+            "name": "mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "quantity",
+            "type": "u32"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "reference",
+            "type": "pubkey"
           }
         ]
       }
@@ -641,6 +892,18 @@
           {
             "name": "bump",
             "type": "u8"
+          },
+          {
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "name": "image_url",
+            "type": "string"
+          },
+          {
+            "name": "nonce",
+            "type": "u64"
           }
         ]
       }
@@ -685,6 +948,10 @@
           {
             "name": "bump",
             "type": "u8"
+          },
+          {
+            "name": "next_nonce",
+            "type": "u64"
           }
         ]
       }

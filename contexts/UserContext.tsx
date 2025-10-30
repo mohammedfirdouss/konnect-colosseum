@@ -9,7 +9,7 @@ export interface User {
   email: string;
   phone: string;
   role: UserRole;
-  walletAddress: string;
+  walletAddress?: string;
   balance: number;
   gamificationPoints?: number;
   level?: number;

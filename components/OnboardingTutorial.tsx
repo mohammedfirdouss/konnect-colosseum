@@ -40,7 +40,7 @@ export function OnboardingTutorial() {
     if (currentSlide < slides.length - 1) {
       setCurrentSlide(prev => prev + 1);
     } else {
-      router.push('/home');
+      router.push("/marketplace");
     }
   };
 
@@ -51,7 +51,7 @@ export function OnboardingTutorial() {
   };
 
   const handleSkip = () => {
-    router.push('/home');
+    router.push("/marketplace");
   };
 
   const slide = slides[currentSlide];

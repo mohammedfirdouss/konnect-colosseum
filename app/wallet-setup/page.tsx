@@ -42,10 +42,6 @@ const WalletSetup = () => {
     fetchBalance();
   }, [connected, publicKey, connection]);
 
-  const handleContinueToPassword = () => {
-    setStep('password');
-  };
-
   const handleCreateAccount = () => {
     if (!password || !confirmPassword) {
       toast.error('Please enter and confirm your password');
@@ -73,7 +69,7 @@ const WalletSetup = () => {
       setHasCompletedOnboarding(true);
       
       toast.success('Account created successfully!');
-      router.push('/home');
+      router.push("/marketplace");
     }
   };
 

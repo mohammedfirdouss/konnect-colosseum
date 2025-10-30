@@ -1,7 +1,22 @@
-import { Home, ShoppingBag, ShoppingCart, CreditCard, FileText, Trophy, Package } from 'lucide-react';
+import {
+  Home,
+  ShoppingBag,
+  ShoppingCart,
+  CreditCard,
+  FileText,
+  Trophy,
+  Package,
+  User,
+} from "lucide-react";
 
-type TabType = 'home' | 'marketplace' | 'cart' | 'wallet' | 'bills' | 'gamification';
-type UserRole = 'buyer' | 'seller' | 'both' | null;
+type TabType =
+  | "home"
+  | "marketplace"
+  | "cart"
+  | "wallet"
+  | "bills"
+  | "gamification";
+type UserRole = "buyer" | "seller" | "both" | null;
 
 interface BottomNavProps {
   activeTab: TabType;
@@ -9,46 +24,50 @@ interface BottomNavProps {
   userRole: UserRole;
 }
 
-export function BottomNav({ activeTab, onTabChange, userRole }: BottomNavProps) {
-  const isSeller = userRole === 'seller' || userRole === 'both';
+export function BottomNav({
+  activeTab,
+  onTabChange,
+  userRole,
+}: BottomNavProps) {
+  const isSeller = userRole === "seller" || userRole === "both";
 
   const tabs = [
     {
-      id: 'home' as TabType,
-      icon: Home,
-      label: 'Home',
-    },
-    {
-      id: 'marketplace' as TabType,
+      id: "marketplace" as TabType,
       icon: isSeller ? Package : ShoppingBag,
-      label: isSeller ? 'My Listings' : 'Marketplace',
+      label: isSeller ? "My Listings" : "Marketplace",
     },
     {
-      id: 'cart' as TabType,
+      id: "cart" as TabType,
       icon: isSeller ? Package : ShoppingCart,
-      label: isSeller ? 'My Orders' : 'Cart',
+      label: isSeller ? "My Orders" : "Cart",
     },
     {
-      id: 'wallet' as TabType,
+      id: "wallet" as TabType,
       icon: CreditCard,
-      label: 'Wallet',
+      label: "Wallet",
     },
     {
-      id: 'bills' as TabType,
+      id: "bills" as TabType,
       icon: FileText,
-      label: 'Bills',
+      label: "Bills",
     },
     {
-      id: 'gamification' as TabType,
+      id: "gamification" as TabType,
       icon: Trophy,
-      label: 'Rewards',
+      label: "Rewards",
+    },
+    {
+      id: "home" as TabType,
+      icon: User,
+      label: "Profile",
     },
   ];
 
   return (
     <div
       className="fixed bottom-0 left-0 right-0 z-50 px-2 py-2"
-      style={{ backgroundColor: '#121212', borderTop: '1px solid #333333' }}
+      style={{ backgroundColor: "#121212", borderTop: "1px solid #333333" }}
     >
       <div className="flex items-center justify-around">
         {tabs.map((tab) => {
@@ -61,7 +80,7 @@ export function BottomNav({ activeTab, onTabChange, userRole }: BottomNavProps) 
               onClick={() => onTabChange(tab.id)}
               className="flex flex-col items-center gap-1 py-2 px-3 rounded-lg transition-all"
               style={{
-                color: isActive ? '#9945FF' : '#B3B3B3',
+                color: isActive ? "#9945FF" : "#B3B3B3",
               }}
             >
               <Icon size={22} />

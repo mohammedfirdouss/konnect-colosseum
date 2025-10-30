@@ -38,13 +38,13 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
 
   // Map pathname to tab
   const getCurrentTab = () => {
-    if (pathname.includes('/home')) return 'home';
-    if (pathname.includes('/marketplace')) return 'marketplace';
-    if (pathname.includes('/cart')) return 'cart';
-    if (pathname.includes('/wallet')) return 'wallet';
-    if (pathname.includes('/bills')) return 'bills';
-    if (pathname.includes('/gamification')) return 'gamification';
-    return 'home';
+    if (pathname.includes("/marketplace")) return "marketplace";
+    if (pathname.includes("/home")) return "home";
+    if (pathname.includes("/cart")) return "cart";
+    if (pathname.includes("/wallet")) return "wallet";
+    if (pathname.includes("/bills")) return "bills";
+    if (pathname.includes("/gamification")) return "gamification";
+    return "marketplace";
   };
 
   const handleTabChange = (tab: string) => {

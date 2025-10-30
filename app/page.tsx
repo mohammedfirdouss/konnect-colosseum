@@ -7,14 +7,20 @@ import { useUser } from '../contexts/UserContext';
 
 export default function Home() {
   const router = useRouter();
-  const { isAuthenticated, user } = useUser();
+  const { isAuthenticated, user, hasCompletedOnboarding } = useUser();
+
+  // Debug logging
+  console.log('Main page - user:', user);
+  console.log('Main page - isAuthenticated:', isAuthenticated);
+  console.log('Main page - hasCompletedOnboarding:', hasCompletedOnboarding);
 
   useEffect(() => {
     // If user is authenticated and has completed onboarding, redirect to home
-    if (isAuthenticated && user?.walletAddress) {
-      router.push('/home');
-    }
-  }, [isAuthenticated, user, router]);
+    // if (isAuthenticated && hasCompletedOnboarding) {
+    //   console.log('Redirecting to /home');
+    //   router.push('/home');
+    // }
+  }, [isAuthenticated, hasCompletedOnboarding, router]);
 
   return <WelcomeScreen />;
 }

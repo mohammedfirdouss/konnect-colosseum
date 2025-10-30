@@ -2,60 +2,14 @@ import { useState } from 'react';
 import { motion } from 'motion/react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
-import { RegistrationForm, RegistrationData } from './RegistrationForm';
-import { useUser } from '../contexts/UserContext';
-import { toast } from 'sonner';
+import { RegistrationForm } from './RegistrationForm';
 import { useIsMobile } from '../hooks/useIsMobile';
 
 export function Registration() {
   const router = useRouter();
-  const { setUser } = useUser();
   const { isMobile } = useIsMobile();
-  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = async (data: RegistrationData) => {
-    setIsLoading(true);
 
-    // Simulate API call
-    setTimeout(() => {
-      // Check if user already exists
-      const savedCredentials = localStorage.getItem('konnect_credentials');
-      
-      if (savedCredentials) {
-        try {
-          const credentials = JSON.parse(savedCredentials);
-          if (credentials.email === data.email) {
-            toast.error('An account with this email already exists. Please sign in.');
-            setIsLoading(false);
-            return;
-          }
-        } catch (e) {
-          // Continue if parsing fails
-        }
-      }
-
-      // Save credentials
-      localStorage.setItem('konnect_credentials', JSON.stringify({
-        email: data.email,
-        password: data.password,
-      }));
-
-      // Create initial user object
-      setUser({
-        name: data.name,
-        email: data.email,
-        phone: data.phone,
-        role: null, // Will be set in role selection
-        walletAddress: '',
-        balance: 0,
-      });
-
-      toast.success('Account created successfully!');
-      
-      // Navigate to role selection
-      router.push('/role');
-    }, 1000);
-  };
 
   const handleBack = () => {
     router.push('/login');
@@ -98,7 +52,7 @@ export function Registration() {
         </div>
 
         {/* Registration Form */}
-        <RegistrationForm onSubmit={handleSubmit} isLoading={isLoading} />
+        <RegistrationForm  />
 
         {/* Sign In Link */}
         <motion.div

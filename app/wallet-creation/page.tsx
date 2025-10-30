@@ -90,7 +90,7 @@ const WalletCreation = () => {
       setHasCompletedOnboarding(true);
       
       toast.success('Account created successfully!');
-      router.push('/home');
+      router.push("/marketplace");
     }
   };
 
